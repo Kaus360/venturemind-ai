@@ -12,3 +12,4 @@ python-dotenv
 pydantic
 httpx
 pydantic-settings
+alembic
