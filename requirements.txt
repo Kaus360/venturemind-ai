@@ -11,3 +11,4 @@ numpy
 python-dotenv
 pydantic
 httpx
+pydantic-settings
