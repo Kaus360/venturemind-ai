@@ -1,22 +1,44 @@
-"""Central configuration for the VentureMind AI ML layer.
-
-The ML layer can run as a standalone FastAPI service on ``infra-ml-dev`` and
-later merge cleanly with the main application. Configuration is loaded from
-environment variables and an optional local ``.env`` file using
-``pydantic-settings`` v2.
-"""
-
 from __future__ import annotations
 
+import os
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Self
 
+from dotenv import load_dotenv
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+ENV_FILE = BASE_DIR / ".env"
+load_dotenv(ENV_FILE, override=False)
 
+
+# --- Team Member 1: Agent Orchestration Config ---
+@dataclass
+class Config:
+    GROQ_API_KEY: str
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    APP_ENV: str = "development"
+
+    @classmethod
+    def validate(cls, config: "Config") -> "Config":
+        if not config.GROQ_API_KEY or not config.GROQ_API_KEY.strip():
+            raise ValueError("GROQ_API_KEY cannot be empty.")
+        return config
+
+
+config = Config.validate(
+    Config(
+        GROQ_API_KEY=os.getenv("GROQ_API_KEY", ""),
+        GROQ_MODEL=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+        APP_ENV=os.getenv("APP_ENV", "development"),
+    )
+)
+
+
+# --- Team Member 2: ML Infrastructure Config ---
 class MLConfig(BaseSettings):
-    """Runtime settings for ML, vector search, and database infrastructure."""
-
     database_url: str = ""
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
@@ -41,16 +63,11 @@ class MLConfig(BaseSettings):
     )
 
     @model_validator(mode="after")
-    def validate(self) -> Self:
-        """Validate required configuration after environment loading."""
-
-        if not self.database_url.strip():
-            raise ValueError("DATABASE_URL must be configured for the ML layer.")
-
+    def validate_ml(self) -> Self:
         return self
 
 
 try:
     ml_config = MLConfig()
 except Exception:
-    ml_config = None  # type: ignore[assignment]
+    ml_config = None

@@ -7,14 +7,10 @@ from typing import Any, AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# ==========================================
-# TEAM MEMBER 1 — Agent Orchestration
-# ==========================================
+# Team Member 1 — Agent Orchestration
 from backend.api.routes import router
 
-# ==========================================
-# TEAM MEMBER 2 — ML Infrastructure
-# ==========================================
+# Team Member 2 — ML Infrastructure
 from backend.api.ml_routes import router as ml_router
 from backend.db.postgres import close_db_connections, verify_connection
 from backend.vectorstore.qdrant_client import (
@@ -28,18 +24,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
-    """Manage application startup and shutdown lifecycle events.
-    
-    Team Member 1 (Agent Orchestration):
-      - Config is validated at import time via Config.validate().
-      - Note: GROQ_API_KEY must exist in .env.
-        
-    Team Member 2 (ML Infrastructure):
-      - Bootstrap functions are called for Qdrant and PostgreSQL.
-      - Gracefully closes connections on shutdown.
-    """
-
-    # --- STARTUP: Team Member 2 - ML Infrastructure ---
+    # STARTUP: Team Member 2 — ML Infrastructure
     try:
         result = await create_collections()
         logger.info("Qdrant collections: %s", result.model_dump())
@@ -52,24 +37,19 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         logger.exception("PostgreSQL init failed.")
 
-    # --- STARTUP: Team Member 1 - Agent Orchestration ---
-    # config already validated at import time via Config.validate()
-    # GROQ_API_KEY must exist in .env
-
+    # STARTUP: Team Member 1 — config already validated at import time
     yield
 
-    # --- SHUTDOWN: Team Member 2 - ML Infrastructure ---
+    # SHUTDOWN: Team Member 2 — ML Infrastructure
     try:
         await close_qdrant_client()
-        logger.info("Qdrant client closed successfully.")
     except Exception:
         logger.exception("Failed to close Qdrant client.")
 
     try:
         await close_db_connections()
-        logger.info("Database connections closed successfully.")
     except Exception:
-        logger.exception("Failed to close Database connections.")
+        logger.exception("Failed to close database connections.")
 
 
 app = FastAPI(
@@ -87,16 +67,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register Team Member 1 router
 app.include_router(router, prefix="/api/v1")
-
-# Register Team Member 2 router (already has prefix internally)
 app.include_router(ml_router)
 
 
 @app.get("/health")
 async def health_check_endpoint() -> dict[str, Any]:
-    """Check overall application health."""
     postgres_ok = False
     qdrant_ok = False
 
@@ -126,7 +102,6 @@ async def health_check_endpoint() -> dict[str, Any]:
 
 @app.get("/")
 async def root() -> dict[str, Any]:
-    """Return API info with both route catalogs."""
     return {
         "app": "VentureMind AI",
         "version": "1.0.0",
