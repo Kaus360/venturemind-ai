@@ -2,20 +2,14 @@ from __future__ import annotations
 
 from langchain_groq import ChatGroq
 
-from backend.config import get_config
+from backend.config import config
 
 
-def get_llm_client(*, temperature: float = 0.0, timeout: float | None = 30.0) -> ChatGroq:
-    """
-    Create a configured Groq chat client for structured agent workflows.
+def get_llm(*, temperature: float = 0.7, model: str | None = None) -> ChatGroq:
+    """Return a configured Groq chat model instance."""
 
-    The default temperature is pinned to 0 to keep JSON outputs predictable.
-    """
-
-    config = get_config()
     return ChatGroq(
-        api_key=config.groq_api_key.get_secret_value(),
-        model=config.groq_model,
+        groq_api_key=config.GROQ_API_KEY,
+        model_name=model or config.GROQ_MODEL,
         temperature=temperature,
-        timeout=timeout,
     )

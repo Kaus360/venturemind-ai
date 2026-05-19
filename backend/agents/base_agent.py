@@ -1,41 +1,23 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Dict
 
-from langchain_core.language_models.chat_models import BaseChatModel
-
-from backend.utils.llm_client import get_llm_client
-
-
-AgentState = dict[str, Any]
+from backend.utils.llm_client import get_llm
 
 
 class BaseAgent(ABC):
-    """
-    Shared contract for all backend agents.
+    """Abstract base class for VentureMind AI agents."""
 
-    Agents must accept a mutable state dictionary and return a JSON-serializable
-    state dictionary so they compose cleanly in LangGraph workflows.
-    """
-
-    def __init__(self, *, llm: BaseChatModel | None = None) -> None:
-        self.llm = llm or get_llm_client()
+    def __init__(self, temperature: float = 0.7) -> None:
+        self.llm = get_llm(temperature=temperature)
 
     @abstractmethod
-    async def run(self, state: AgentState) -> AgentState:
-        """
-        Execute agent logic asynchronously.
+    async def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the agent and return a structured JSON-compatible dict."""
 
-        Implementations must return a structured JSON-compatible dictionary.
-        """
-
-    def validate_state(self, state: AgentState) -> AgentState:
-        if not isinstance(state, dict):
-            raise TypeError("Agent state must be a dictionary.")
-        return state
-
-    def ensure_json_response(self, payload: Any) -> AgentState:
-        if not isinstance(payload, dict):
-            raise TypeError("Agents must return a structured JSON object as a dictionary.")
-        return payload
+    def _build_messages(self, system_prompt: str, user_prompt: str) -> list[tuple[str, str]]:
+        return [
+            ("system", system_prompt),
+            ("user", user_prompt),
+        ]

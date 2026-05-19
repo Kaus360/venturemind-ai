@@ -1,26 +1,26 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-from backend.config import get_config
+from backend.config import config
 
 
-config = get_config()
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    Config = type(config)
+    Config.validate(config)
+    yield
+
 
 app = FastAPI(
-    title="VentureMind AI Backend",
-    version="0.1.0",
-    docs_url="/docs" if config.app_env != "production" else None,
-    redoc_url="/redoc" if config.app_env != "production" else None,
+    title="VentureMind AI",
+    description="Autonomous Venture Intelligence Platform",
+    lifespan=lifespan,
 )
 
 
-@app.get("/health", tags=["system"])
+@app.get("/health")
 async def health_check() -> dict[str, str]:
-    """Async health endpoint for uptime probes."""
-
-    return {
-        "status": "ok",
-        "environment": config.app_env,
-        "model": config.groq_model,
-    }
+    return {"status": "ok", "app": "VentureMind AI"}
