@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from backend.api.routes import router
 from backend.config import config
 
 
@@ -19,6 +20,8 @@ app = FastAPI(
     description="Autonomous Venture Intelligence Platform",
     lifespan=lifespan,
 )
+
+app.include_router(router, prefix="/api/v1")
 
 
 @app.get("/health")
