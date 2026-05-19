@@ -11,6 +11,7 @@ from backend.agents.redteam_agent import RedTeamAgent
 from backend.agents.roadmap_agent import RoadmapAgent
 from backend.agents.solution_generator_agent import SolutionGeneratorAgent
 from backend.agents.validation_agent import ValidationAgent
+from backend.chains.memory_chain import memory_chain
 from backend.workflows.orchestration_graph import venture_graph
 
 
@@ -86,7 +87,13 @@ async def validate_startup(payload: ValidateStartupRequest) -> dict[str, Any]:
 @router.post("/execute-workflow")
 async def execute_workflow(payload: ExecuteWorkflowRequest) -> dict[str, Any]:
     result = await venture_graph.ainvoke({"domain": payload.domain})
+    memory_chain.add_entry(result)
     return dict(result)
+
+
+@router.get("/memory-context")
+async def get_memory_context() -> list[dict[str, Any]]:
+    return memory_chain.get_context()
 
 
 @router.post("/analyze-competitors")
