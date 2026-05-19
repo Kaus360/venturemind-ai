@@ -49,6 +49,11 @@ class GenerateRoadmapRequest(BaseModel):
     validation: dict[str, Any]
 
 
+class FullAnalysisRequest(BaseModel):
+    domain: str
+    startup_idea: str
+
+
 @router.post("/generate-problems")
 async def generate_problems(payload: GenerateProblemsRequest) -> dict[str, Any]:
     agent = ProblemDiscoveryAgent()
@@ -134,4 +139,60 @@ async def generate_roadmap(payload: GenerateRoadmapRequest) -> dict[str, Any]:
     return {
         "roadmap": result.get("roadmap", {}),
         "error": result.get("error"),
+    }
+
+
+@router.post("/full-analysis")
+async def full_analysis(payload: FullAnalysisRequest) -> dict[str, Any]:
+    validation_agent = ValidationAgent()
+    competitor_agent = CompetitorAgent()
+    redteam_agent = RedTeamAgent()
+    roadmap_agent = RoadmapAgent()
+
+    base_state = {
+        "domain": payload.domain,
+        "startup_idea": payload.startup_idea,
+    }
+
+    validation_result = await validation_agent.run(base_state)
+    validation = validation_result.get("validation", {})
+
+    competitor_result = await competitor_agent.run(base_state)
+    competitor_data = competitor_result.get("competitor_data", {})
+
+    redteam_result = await redteam_agent.run(
+        {
+            "startup_idea": payload.startup_idea,
+            "validation": validation,
+        }
+    )
+    critic_feedback = redteam_result.get("critic_feedback", {})
+
+    solution = {
+        "startup_idea": payload.startup_idea,
+        "target_domain": payload.domain,
+    }
+    roadmap_result = await roadmap_agent.run(
+        {
+            "startup_idea": payload.startup_idea,
+            "solution": solution,
+            "validation": validation,
+        }
+    )
+    roadmap = roadmap_result.get("roadmap", {})
+
+    return {
+        "domain": payload.domain,
+        "startup_idea": payload.startup_idea,
+        "solution": solution,
+        "validation": validation,
+        "competitor_data": competitor_data,
+        "critic_feedback": critic_feedback,
+        "roadmap": roadmap,
+        "errors": {
+            "validation": validation_result.get("error"),
+            "competitor_analysis": competitor_result.get("error"),
+            "redteam": redteam_result.get("error"),
+            "roadmap": roadmap_result.get("error"),
+        },
     }
