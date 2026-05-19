@@ -4,7 +4,10 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from backend.agents.competitor_agent import CompetitorAgent
 from backend.agents.problem_discovery_agent import ProblemDiscoveryAgent
+from backend.agents.redteam_agent import RedTeamAgent
+from backend.agents.roadmap_agent import RoadmapAgent
 from backend.agents.solution_generator_agent import SolutionGeneratorAgent
 from backend.agents.validation_agent import ValidationAgent
 
@@ -16,6 +19,9 @@ class VentureState(TypedDict, total=False):
     problems: Any
     solution: dict[str, Any]
     validation: dict[str, Any]
+    competitor_data: dict[str, Any]
+    critic_feedback: dict[str, Any]
+    roadmap: dict[str, Any]
     memory_context: Any
     error: str
 
@@ -23,6 +29,9 @@ class VentureState(TypedDict, total=False):
 problem_discovery_agent = ProblemDiscoveryAgent()
 solution_generator_agent = SolutionGeneratorAgent()
 validation_agent = ValidationAgent()
+competitor_agent = CompetitorAgent()
+redteam_agent = RedTeamAgent()
+roadmap_agent = RoadmapAgent()
 
 
 async def extract_problem(state: VentureState) -> VentureState:
@@ -57,18 +66,36 @@ async def run_validation(state: VentureState) -> VentureState:
     return await validation_agent.run(state)
 
 
+async def run_competitor_analysis(state: VentureState) -> VentureState:
+    return await competitor_agent.run(state)
+
+
+async def run_redteam(state: VentureState) -> VentureState:
+    return await redteam_agent.run(state)
+
+
+async def run_roadmap(state: VentureState) -> VentureState:
+    return await roadmap_agent.run(state)
+
+
 graph = StateGraph(VentureState)
 graph.add_node("problem_discovery", run_problem_discovery)
 graph.add_node("extract_problem", extract_problem)
 graph.add_node("solution_generator", run_solution_generator)
 graph.add_node("extract_idea", extract_idea)
 graph.add_node("validation_node", run_validation)
+graph.add_node("competitor_analysis_node", run_competitor_analysis)
+graph.add_node("redteam_node", run_redteam)
+graph.add_node("roadmap_node", run_roadmap)
 
 graph.add_edge(START, "problem_discovery")
 graph.add_edge("problem_discovery", "extract_problem")
 graph.add_edge("extract_problem", "solution_generator")
 graph.add_edge("solution_generator", "extract_idea")
 graph.add_edge("extract_idea", "validation_node")
-graph.add_edge("validation_node", END)
+graph.add_edge("validation_node", "competitor_analysis_node")
+graph.add_edge("competitor_analysis_node", "redteam_node")
+graph.add_edge("redteam_node", "roadmap_node")
+graph.add_edge("roadmap_node", END)
 
 venture_graph = graph.compile()

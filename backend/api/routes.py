@@ -5,7 +5,10 @@ from typing import Any
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from backend.agents.competitor_agent import CompetitorAgent
 from backend.agents.problem_discovery_agent import ProblemDiscoveryAgent
+from backend.agents.redteam_agent import RedTeamAgent
+from backend.agents.roadmap_agent import RoadmapAgent
 from backend.agents.solution_generator_agent import SolutionGeneratorAgent
 from backend.agents.validation_agent import ValidationAgent
 from backend.workflows.orchestration_graph import venture_graph
@@ -28,6 +31,21 @@ class ValidateStartupRequest(BaseModel):
 
 class ExecuteWorkflowRequest(BaseModel):
     domain: str
+
+
+class AnalyzeCompetitorsRequest(BaseModel):
+    startup_idea: str
+
+
+class RedteamCritiqueRequest(BaseModel):
+    startup_idea: str
+    validation: dict[str, Any]
+
+
+class GenerateRoadmapRequest(BaseModel):
+    startup_idea: str
+    solution: dict[str, Any]
+    validation: dict[str, Any]
 
 
 @router.post("/generate-problems")
@@ -69,3 +87,44 @@ async def validate_startup(payload: ValidateStartupRequest) -> dict[str, Any]:
 async def execute_workflow(payload: ExecuteWorkflowRequest) -> dict[str, Any]:
     result = await venture_graph.ainvoke({"domain": payload.domain})
     return dict(result)
+
+
+@router.post("/analyze-competitors")
+async def analyze_competitors(payload: AnalyzeCompetitorsRequest) -> dict[str, Any]:
+    agent = CompetitorAgent()
+    result = await agent.run({"startup_idea": payload.startup_idea})
+    return {
+        "competitor_data": result.get("competitor_data", {}),
+        "error": result.get("error"),
+    }
+
+
+@router.post("/redteam-critique")
+async def redteam_critique(payload: RedteamCritiqueRequest) -> dict[str, Any]:
+    agent = RedTeamAgent()
+    result = await agent.run(
+        {
+            "startup_idea": payload.startup_idea,
+            "validation": payload.validation,
+        }
+    )
+    return {
+        "critic_feedback": result.get("critic_feedback", {}),
+        "error": result.get("error"),
+    }
+
+
+@router.post("/generate-roadmap")
+async def generate_roadmap(payload: GenerateRoadmapRequest) -> dict[str, Any]:
+    agent = RoadmapAgent()
+    result = await agent.run(
+        {
+            "startup_idea": payload.startup_idea,
+            "solution": payload.solution,
+            "validation": payload.validation,
+        }
+    )
+    return {
+        "roadmap": result.get("roadmap", {}),
+        "error": result.get("error"),
+    }
